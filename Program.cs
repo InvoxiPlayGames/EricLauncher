@@ -9,7 +9,6 @@ namespace EricLauncher
         static string BaseAppDataFolder = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData) + $"/EricLauncher";
         static string RedirectURL = "https://www.epicgames.com/id/api/redirect?clientId=" + EASLogin.LAUNCHER_CLIENT + "&responseType=code";
 
-
         static void PrintUsage()
         {
             Console.WriteLine("Usage: EricLauncher.exe [executable path] (options)");
@@ -19,6 +18,8 @@ namespace EricLauncher
             Console.WriteLine("                              omitting this option will use the default account");
             Console.WriteLine("    --noManifest - don't check the local Epic Games Launcher install folder for the manifest.");
             Console.WriteLine("                   this WILL break certain games from launching, e.g. Fortnite");
+            Console.WriteLine("    --stayOpen - keeps EricLauncher open in the background until the game is closed");
+            Console.WriteLine("                 useful for launching through other launchers, e.g. Steam");
         }
 
         static async Task Main(string[] args)
@@ -34,6 +35,7 @@ namespace EricLauncher
             // parse the cli arguments
             string? account_id = null;
             bool no_manifest = false;
+            bool stay_open = false;
             if (args.Length > 1)
             {
                 for (int i = 1; i < args.Length; i++)
@@ -42,6 +44,8 @@ namespace EricLauncher
                         account_id = args[++i];
                     if (args[i] == "--noManifest")
                         no_manifest = true;
+                    if (args[i] == "--stayOpen")
+                        stay_open = true;
                 }
             }
 
@@ -159,10 +163,15 @@ namespace EricLauncher
             // launch the game
             string exchange = await account.GetExchangeCode();
             Console.WriteLine("Launching game...");
-            LaunchGame(args[0], exchange, account, manifest);
+            Process game = LaunchGame(args[0], exchange, account, manifest);
+            if (stay_open)
+            {
+                game.WaitForExit();
+                Console.WriteLine($"Game exited with code {game.ExitCode}");
+            }
         }
 
-        static void LaunchGame(string filename, string? exchange, EASAccount? account, EGLManifest? manifest)
+        static Process LaunchGame(string filename, string? exchange, EASAccount? account, EGLManifest? manifest)
         {
             Process p = new Process();
             p.StartInfo.FileName = filename;
@@ -192,6 +201,7 @@ namespace EricLauncher
                 }
             }
             p.Start();
+            return p;
         }
 
         static EGLManifest? GetManifest(string executable_name)

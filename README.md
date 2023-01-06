@@ -26,6 +26,8 @@ Options:
                               omitting this option will use the default account
     --noManifest - don't check the local Epic Games Launcher install folder for the manifest.
                    this WILL break certain games from launching, e.g. Fortnite
+    --stayOpen - keeps EricLauncher open in the background until the game is closed
+                 useful for launching through other launchers, e.g. Steam
 ```
 
 The account ID parameter is only required if you are using multiple accounts. Omitting this value will use (or save) a default account.
