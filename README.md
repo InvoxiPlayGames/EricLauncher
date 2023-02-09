@@ -1,6 +1,6 @@
 # EricLauncher
 
-A very bare-bones launcher for Epic Games Store games **that have already been installed via the official launcher**. Designed for Windows and written in C# using .NET 6.0.
+A very bare-bones launcher for Epic Games Store games **that have already been installed via the official launcher**. Designed for Windows and written in C# using .NET 7.0.
 
 This application was written for personal usage and isn't 100% user oriented. If you're looking for something more stable, tested, reliable, featureful and/or cross-platform, check out [Legendary (CLI)](https://github.com/derrod/legendary) or [Heroic Games Launcher (GUI)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher).
 

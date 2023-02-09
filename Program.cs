@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -207,10 +208,15 @@ namespace EricLauncher
         static EGLManifest? GetManifest(string executable_name)
         {
             IEnumerable<string> files;
+            string manifestfolder = "/Epic/EpicGamesLauncher/Data/Manifests";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) // .NET 7 doesn't make SpecialFolder.LocalAppliactionData go to the correct folder :)
+                manifestfolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Library", "Application Support") + manifestfolder;
+            else
+                manifestfolder = System.Environment.GetFolderPath(System.Environment.SpecialFolder.CommonApplicationData) + manifestfolder;
+
             try
             {
-                files = Directory.EnumerateFiles(System.Environment.GetFolderPath(System.Environment.SpecialFolder.CommonApplicationData)
-                                                                    + @"\Epic\EpicGamesLauncher\Data\Manifests");
+                files = Directory.EnumerateFiles(manifestfolder);
             } catch {
                 return null;
             }
