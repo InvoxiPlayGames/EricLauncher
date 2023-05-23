@@ -101,7 +101,10 @@ namespace EricLauncher
                 } catch { }
                 if (account == null)
                 {
-                    Console.WriteLine("Refresh token expired or invalid!");
+                    Console.WriteLine("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+                    Console.WriteLine("@    WARNING: EPIC GAMES REFRESH TOKEN HAS CHANGED!     @");
+                    Console.WriteLine("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+                    Console.WriteLine("IT IS POSSIBLE THAT SWEENEY IS DOING SOMETHING EPIC!");
                     needs_code_login = true;
                 }
             }
