@@ -16,10 +16,8 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 7.0.x
-    - name: Build
-      run: dotnet build -c Release -r ${{ matrix.rid }}
-    - name: Publish
-      run: dotnet publish -c Release -r ${{ matrix.rid }} --no-build
+    - name: Build and Publish
+      run: dotnet publish -c Release -r ${{ matrix.rid }}
     - name: Upload
       uses: actions/upload-artifact@v3
       with:
