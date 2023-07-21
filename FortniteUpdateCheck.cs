@@ -26,10 +26,13 @@ namespace EricLauncher
 
     class FortniteUpdateCheck
     {
+        public const string FORTNITE_PC_CLIENT = "ec684b8c687f479fadea3cb2ad83f5c6";
+        public const string FORTNITE_PC_SECRET = "e1f31c211f28413186262d37a13fc84d";
+
         public static async Task<bool> IsUpToDate(string fortnite_version, string platform)
         {
-            EASLogin eas = new EASLogin(EASLogin.FORTNITE_CLIENT, EASLogin.FORTNITE_SECRET);
-            string? client_credentials = await eas.GetClientCredentials();
+            EpicLogin epic = new EpicLogin(FORTNITE_PC_CLIENT, FORTNITE_PC_SECRET);
+            string? client_credentials = await epic.GetClientCredentials();
             HttpClient client = new();
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
