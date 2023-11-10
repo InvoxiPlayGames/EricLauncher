@@ -77,5 +77,13 @@ namespace EricLauncher
                 return null;
             return new EpicAccount(login_response);
         }
+
+        public async Task<EpicAccount?> LoginWithExchangeCode(string exchange_code)
+        {
+            EpicLoginResponse? login_response = await DoOAuthLogin("exchange_code", null, exchange_code);
+            if (login_response == null) // maybe we should throw an exception here
+                return null;
+            return new EpicAccount(login_response);
+        }
     }
 }

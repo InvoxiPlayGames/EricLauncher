@@ -37,7 +37,7 @@ namespace EricLauncher
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             client.DefaultRequestHeaders.Add("Authorization", $"bearer {client_credentials}");
-            string url = $"https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/v2/versioncheck/{platform}?version={HttpUtility.UrlEncode(fortnite_version)}-{platform}";
+            string url = $"https://fngw-mcp-gc-livefn.ol.epicgames.com/fortnite/api/v2/versioncheck/{platform}?version={HttpUtility.UrlEncode(fortnite_version)}-{platform}";
             FortniteUpdateResponse? resp = await client.GetFromJsonAsync<FortniteUpdateResponse>(url);
             return (resp!.type == "NO_UPDATE");
         }
