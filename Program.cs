@@ -13,7 +13,7 @@ namespace EricLauncher
 
         static void PrintUsage()
         {
-            Console.WriteLine("Usage: EricLauncher.exe [executable path] (options)");
+            Console.WriteLine("Usage: EricLauncher.exe [executable path] (options) (game arguments)");
             Console.WriteLine();
             Console.WriteLine("Options:");
             Console.WriteLine("  --accountId [id]  - use a specific Epic Games account ID to sign in.");
@@ -44,28 +44,36 @@ namespace EricLauncher
             bool dry_run = false;
             bool offline = false;
             bool skip_fortnite_update = false;
+            bool caldera = false;
+            string extra_args = "";
             if (args.Length > 1)
             {
                 for (int i = 1; i < args.Length; i++)
                 {
                     if (args[i] == "--accountId")
                         account_id = args[++i];
-                    if (args[i] == "--manifest")
+                    else if (args[i] == "--manifest")
                         manifest_path = args[++i];
-                    if (args[i] == "--setDefault")
+                    else if (args[i] == "--setDefault")
                         set_default = true;
-                    if (args[i] == "--noManifest")
+                    else if (args[i] == "--noManifest")
                         no_manifest = true;
-                    if (args[i] == "--stayOpen")
+                    else if (args[i] == "--stayOpen")
                         stay_open = true;
-                    if (args[i] == "--dryRun")
+                    else if (args[i] == "--dryRun")
                         dry_run = true;
-                    if (args[i] == "--offline")
+                    else if (args[i] == "--offline")
                         offline = true;
-                    if (args[i] == "--noCheckFn")
+                    else if (args[i] == "--caldera")
+                        caldera = true;
+                    else if (args[i] == "--noCheckFn")
                         skip_fortnite_update = true;
+                    else
+                        extra_args += args[i] + " ";
                 }
             }
+
+            string exe_name = args[0];
 
             // always run as a dry run if we're on Linux or FreeBSD
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
@@ -74,13 +82,13 @@ namespace EricLauncher
 
             // if we're launching fortnite, do an update check
             if (!skip_fortnite_update && !offline &&
-                Path.GetFileName(args[0]).ToLower() == "fortnitelauncher.exe")
+                Path.GetFileName(exe_name).ToLower() == "fortnitelauncher.exe")
             {
                 Console.WriteLine("Checking for Fortnite updates...");
                 // traverse back to the cloud content json
                 try
                 {
-                    string cloudcontent_path = Path.GetDirectoryName(args[0]) + @"\..\..\..\Cloud\cloudcontent.json";
+                    string cloudcontent_path = Path.GetDirectoryName(exe_name) + @"\..\..\..\Cloud\cloudcontent.json";
                     string jsonstring = File.ReadAllText(cloudcontent_path);
                     FortniteCloudContent? cloudcontent = JsonSerializer.Deserialize<FortniteCloudContent>(jsonstring);
                     Console.WriteLine($"Current version: {cloudcontent!.BuildVersion!} ({cloudcontent!.Platform!})");
@@ -209,7 +217,7 @@ namespace EricLauncher
             EGLManifest? manifest = null;
             if (!no_manifest && manifest_path == null)
             {
-                manifest = GetEGLManifest(Path.GetFileName(args[0]));
+                manifest = GetEGLManifest(Path.GetFileName(exe_name));
             } else if (!no_manifest && manifest_path != null)
             {
                 string jsonstring = File.ReadAllText(manifest_path);
@@ -226,8 +234,38 @@ namespace EricLauncher
             string exchange = "";
             if (!offline)
                 exchange = await account.GetExchangeCode();
+
+            // caldera simulation
+            if (caldera && Path.GetFileName(exe_name).StartsWith("Fortnite"))
+            {
+                string? gamedir = Path.GetDirectoryName(exe_name);
+                CalderaResponse? cal_resp = await EpicCaldera.GetCalderaResponse(account_id!, exchange, "fortnite");
+                string acargs = $" -caldera={cal_resp!.jwt}";
+                string acexe = "FortniteClient-Win64-Shipping";
+                switch (cal_resp.provider)
+                {
+                    case "EasyAntiCheatEOS":
+                        acargs += " -fromfl=eaceos -noeac -nobe ";
+                        acexe += "_EAC_EOS.exe";
+                        break;
+                    case "EasyAntiCheat":
+                        acargs += " -fromfl=eac -noeaceos -nobe ";
+                        acexe += "_EAC.exe";
+                        break;
+                    case "BattlEye":
+                        acargs += " -fromfl=be -noeaceos -noeac ";
+                        acexe += "_BE.exe";
+                        break;
+                    default:
+                        Console.WriteLine($"Unknown Caldera provider '{cal_resp.provider}'.");
+                        return;
+                }
+                extra_args += acargs;
+                exe_name = Path.Combine(gamedir!, acexe);
+            }
+
             Console.WriteLine("Launching game...");
-            Process game = await LaunchGame(args[0], exchange, account, manifest, dry_run, offline);
+            Process game = await LaunchGame(exe_name, exchange, account, manifest, dry_run, offline, extra_args);
             if (stay_open && !dry_run)
             {
                 game.WaitForExit();
@@ -235,7 +273,7 @@ namespace EricLauncher
             }
         }
 
-        static async Task<Process> LaunchGame(string filename, string? exchange, EpicAccount? account, EGLManifest? manifest, bool dry_run, bool skip_ovt)
+        static async Task<Process> LaunchGame(string filename, string? exchange, EpicAccount? account, EGLManifest? manifest, bool dry_run, bool skip_ovt, string launch_args)
         {
             Process p = new Process();
             p.StartInfo.FileName = filename;
@@ -268,6 +306,13 @@ namespace EricLauncher
                     foreach (string arg in split_args)
                         p.StartInfo.ArgumentList.Add(arg);
                 }
+            }
+
+            if (launch_args != "")
+            {
+                string[] split_args = launch_args.Split(' ');
+                foreach (string arg in split_args)
+                    p.StartInfo.ArgumentList.Add(arg);
             }
 
             if (account != null && manifest != null && !skip_ovt &&
