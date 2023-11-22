@@ -75,6 +75,18 @@ namespace EricLauncher
 
             string exe_name = args[0];
 
+            // handle special exe names
+            bool exchange_code_only = false;
+            bool caldera_only = false;
+            if (exe_name.StartsWith("EricExchange")) exchange_code_only = true;
+            if (exe_name.EndsWith("EricCaldera")) caldera_only = true;
+            // both these options imply a dry run with no manifest
+            if (exchange_code_only || caldera_only)
+            {
+                no_manifest = true;
+                dry_run = true;
+            }
+
             // always run as a dry run if we're on Linux or FreeBSD
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                 RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
@@ -223,11 +235,10 @@ namespace EricLauncher
                 string jsonstring = File.ReadAllText(manifest_path);
                 manifest = JsonSerializer.Deserialize<EGLManifest>(jsonstring);
             }
-            if (manifest == null)
+            if (manifest == null && !no_manifest)
             {
                 Console.WriteLine("Manifest wasn't loaded! The game might not work properly.");
-                if (!no_manifest)
-                    Console.WriteLine("(Try launching the game via the Epic Games Launcher at least once.)");
+                Console.WriteLine("(Try launching the game via the Epic Games Launcher at least once.)");
             }
 
             // launch the game
@@ -235,8 +246,14 @@ namespace EricLauncher
             if (!offline)
                 exchange = await account.GetExchangeCode();
 
+            if (exchange_code_only)
+            {
+                Console.WriteLine($"Exchange Code: {exchange!}");
+                if (!caldera_only) return;
+            }
+
             // caldera simulation
-            if (caldera && Path.GetFileName(exe_name).StartsWith("Fortnite"))
+            if ((caldera && Path.GetFileName(exe_name).StartsWith("Fortnite")) || caldera_only)
             {
                 string? gamedir = Path.GetDirectoryName(exe_name);
                 CalderaResponse? cal_resp = await EpicCaldera.GetCalderaResponse(account_id!, exchange, "fortnite");
@@ -262,6 +279,13 @@ namespace EricLauncher
                 }
                 extra_args += acargs;
                 exe_name = Path.Combine(gamedir!, acexe);
+
+                if (caldera_only)
+                {
+                    Console.WriteLine($"AC Provider: {cal_resp.provider!}");
+                    Console.WriteLine($"AC JWT: {cal_resp.jwt!}");
+                    return;
+                }
             }
 
             Console.WriteLine("Launching game...");

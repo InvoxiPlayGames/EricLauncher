@@ -4,6 +4,8 @@ A very bare-bones launcher for Epic Games Store games **that have already been i
 
 This application was written for personal usage and isn't 100% user oriented. If you're looking for something more stable, tested, reliable, featureful and/or cross-platform, check out [Legendary (CLI)](https://github.com/derrod/legendary) or [Heroic Games Launcher (GUI)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher).
 
+**This does not handle cloud save games, you may lose save data!**
+
 **This is provided without any warranty, I am not responsible for your account getting banned, your save data being lost, your hard drive exploding, getting sniped at 2nd in a Battle Royale, or thermonuclear war.**
 
 ## Features
