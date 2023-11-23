@@ -11,7 +11,7 @@ This application was written for personal usage and isn't 100% user oriented. If
 ## Features
 
 - Logging in to Epic Games accounts.
-- Multi-account support. (specify an `--accountId` at the command line.)
+- Multi-account support. (specify an `--accountId` or `--account` at the command line.)
 - Checking for Fortnite updates. (if an update is available, the game will not launch.)
 - Windows and macOS support, as well as providing launch args on Linux.
 - Support for at least some games. (tested with Fortnite, Borderlands 3, Death Stranding and FUSER.)
@@ -25,15 +25,16 @@ This is designed to be run from the command line, but you can drag and drop a ga
 Alternatively you could make a batch file or shortcut, or create a shortcut in a launcher such as Steam - pointing to EricLauncher, with the game you want to launch as the launch arguments
 
 ```
-Usage: EricLauncher.exe [executable path] (options)
+Usage: EricLauncher.exe [executable path] (options) (game arguments)
 
 Options:
-  --accountId [id]  - use a specific Epic Games account ID to sign in.
-  --noManifest      - don't check the local Epic Games Launcher install folder for the manifest.
-  --stayOpen        - keeps EricLauncher open in the background until the game is closed.
-  --dryRun          - goes through the Epic Games login flow, but does not launch the game.
-  --offline         - skips the Epic Games login flow, to launch the game in offline mode.
-  --manifest [file] - specify a specific manifest file to use.
+  --accountId [id]     - use a specific Epic Games account ID to sign in.
+  --account [username] - use a specific Epic Games account username to sign in.
+  --noManifest         - don't check the local Epic Games Launcher install folder for the manifest.
+  --stayOpen           - keeps EricLauncher open in the background until the game is closed.
+  --dryRun             - goes through the Epic Games login flow, but does not launch the game.
+  --offline            - skips the Epic Games login flow, to launch the game in offline mode.
+  --manifest [file]    - specify a specific manifest file to use.
 ```
 
 The account ID parameter is only required if you are using multiple accounts. Omitting this value will use (or save) a default account.

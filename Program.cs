@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,12 +17,13 @@ namespace EricLauncher
             Console.WriteLine("Usage: EricLauncher.exe [executable path] (options) (game arguments)");
             Console.WriteLine();
             Console.WriteLine("Options:");
-            Console.WriteLine("  --accountId [id]  - use a specific Epic Games account ID to sign in.");
-            Console.WriteLine("  --noManifest      - don't check the local Epic Games Launcher install folder for the manifest.");
-            Console.WriteLine("  --stayOpen        - keeps EricLauncher open in the background until the game is closed.");
-            Console.WriteLine("  --dryRun          - goes through the Epic Games login flow, but does not launch the game.");
-            Console.WriteLine("  --offline         - skips the Epic Games login flow, to launch the game in offline mode.");
-            Console.WriteLine("  --manifest [file] - specify a specific manifest file to use.");
+            Console.WriteLine("  --accountId [id]     - use a specific Epic Games account ID to sign in.");
+            Console.WriteLine("  --account [username] - use a specific Epic Games account username to sign in.");
+            Console.WriteLine("  --noManifest         - don't check the local Epic Games Launcher install folder for the manifest.");
+            Console.WriteLine("  --stayOpen           - keeps EricLauncher open in the background until the game is closed.");
+            Console.WriteLine("  --dryRun             - goes through the Epic Games login flow, but does not launch the game.");
+            Console.WriteLine("  --offline            - skips the Epic Games login flow, to launch the game in offline mode.");
+            Console.WriteLine("  --manifest [file]    - specify a specific manifest file to use.");
             Console.WriteLine();
         }
 
@@ -37,6 +39,7 @@ namespace EricLauncher
 
             // parse the cli arguments
             string? account_id = null;
+            string? account_name = null;
             string? manifest_path = null;
             bool set_default = false;
             bool no_manifest = false;
@@ -52,6 +55,8 @@ namespace EricLauncher
                 {
                     if (args[i] == "--accountId")
                         account_id = args[++i];
+                    if (args[i] == "--account")
+                        account_name = args[++i];
                     else if (args[i] == "--manifest")
                         manifest_path = args[++i];
                     else if (args[i] == "--setDefault")
@@ -72,6 +77,9 @@ namespace EricLauncher
                         extra_args += args[i] + " ";
                 }
             }
+            // both of these being null implies setting a default account
+            if (account_id == null && account_name == null)
+                set_default = true;
 
             string exe_name = args[0];
 
@@ -120,23 +128,13 @@ namespace EricLauncher
             }
 
             // check if we have an account saved already
-            StoredAccountInfo? storedInfo;
-            bool is_default = account_id == null || set_default;
-            if (account_id != null) {
-                Console.WriteLine($"Using account {account_id}");
+            StoredAccountInfo? storedInfo = null;
+            if (account_name == null && account_id == null)
+                account_id = GetDefaultAccount();
+            if (account_name != null)
+                storedInfo = GetAccountInfoByName(account_name);
+            if (account_id != null)
                 storedInfo = GetAccountInfo(account_id);
-                // check if the account id specified is the current default account
-                if (!set_default)
-                {
-                    StoredAccountInfo? default_account = GetAccountInfo();
-                    if (default_account?.AccountId == storedInfo?.AccountId)
-                        is_default = true;
-                }
-            } else
-            {
-                Console.WriteLine("Using default account");
-                storedInfo = GetAccountInfo();
-            }
             if (storedInfo == null)
             {
                 needs_code_login = true;
@@ -206,11 +204,18 @@ namespace EricLauncher
             }
 
             // if the user provided an account id at the command line but this isn't the same account, quit out
-            if (account_id != null && account!.AccountId != account_id)
+            if (!set_default && account_id != null && account!.AccountId != account_id)
             {
-                Console.WriteLine($"Logged in, but the account ID ({account.AccountId}) isn't the same as the one provided at the command line ({account_id}).");
+                Console.WriteLine($"Logged in, but the account ID ({account.AccountId}) isn't the same as the one selected ({account_id}).");
                 // save the account info later just to save time
-                StoreAccountInfo(account!.MakeStoredAccountInfo(), false);
+                StoreAccountInfo(account!.MakeStoredAccountInfo());
+                return;
+            }
+            if (account_name != null && account!.DisplayName != account_name)
+            {
+                Console.WriteLine($"Logged in, but the account name ({account.DisplayName}) isn't the same as the one selected ({account_name}).");
+                // save the account info later just to save time
+                StoreAccountInfo(account!.MakeStoredAccountInfo());
                 return;
             }
 
@@ -223,7 +228,7 @@ namespace EricLauncher
             // save our refresh token for later usage
             if (!Directory.Exists(BaseAppDataFolder))
                 Directory.CreateDirectory(BaseAppDataFolder);
-            StoreAccountInfo(account!.MakeStoredAccountInfo(), is_default);
+            StoreAccountInfo(account!.MakeStoredAccountInfo(), set_default);
 
             // fetch the game's manifest from the installed epic games launcher
             EGLManifest? manifest = null;
@@ -365,7 +370,7 @@ namespace EricLauncher
         static async Task<string?> GetOwnershipTokenPath(EpicAccount account, EGLManifest manifest)
         {
             Directory.CreateDirectory(BaseOVTFolder);
-            string ovt_path = $"{BaseOVTFolder}/{manifest.MainGameAppName!}.ovt";
+            string ovt_path = $"{BaseOVTFolder}/{account!.AccountId!}-{manifest.MainGameAppName!}.ovt";
             EpicEcom ecom = new(account);
             string? epicovt = await ecom.GetOwnershipToken(manifest.CatalogNamespace!, manifest.CatalogItemId!);
             if (epicovt != null)
@@ -407,19 +412,17 @@ namespace EricLauncher
             return null;
         }
 
-        static void StoreAccountInfo(StoredAccountInfo info, bool is_default = true)
+        static void StoreAccountInfo(StoredAccountInfo info, bool set_default = false)
         {
             string jsonstring = JsonSerializer.Serialize(info);
             File.WriteAllText($"{BaseAppDataFolder}/{info.AccountId!}.json", jsonstring);
-            if (is_default)
-                File.WriteAllText($"{BaseAppDataFolder}/default.json", jsonstring);
+            if (set_default)
+                File.WriteAllText($"{BaseAppDataFolder}/default.json", $"{{\"AccountId\": \"{info.AccountId!}\"}}");
         }
 
-        static StoredAccountInfo? GetAccountInfo(string? account_id = null)
+        static StoredAccountInfo? GetAccountInfo(string account_id)
         {
-            string path = $"{BaseAppDataFolder}/default.json";
-            if (account_id != null && File.Exists($"{BaseAppDataFolder}/{account_id}.json"))
-                path = $"{BaseAppDataFolder}/{account_id}.json";
+            string path = $"{BaseAppDataFolder}/{account_id}.json";
             if (!File.Exists(path))
                 return null;
             try
@@ -429,6 +432,41 @@ namespace EricLauncher
                 if (account_id == null || (info != null && account_id == info.AccountId))
                     return info;
             } catch { }
+            return null;
+        }
+
+        static StoredAccountInfo? GetAccountInfoByName(string display_name)
+        {
+            IEnumerable<string> files = Directory.EnumerateFiles(BaseAppDataFolder);
+            foreach (string filename in files)
+            {
+                if (Path.GetFileNameWithoutExtension(filename).Length != 32) // account id length + .json
+                    continue;
+                try
+                {
+                    string jsonstring = File.ReadAllText(filename);
+                    StoredAccountInfo? info = JsonSerializer.Deserialize<StoredAccountInfo>(jsonstring);
+                    if (info != null && info.DisplayName != null && display_name == info.DisplayName)
+                        return info;
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        static string? GetDefaultAccount()
+        {
+            string path = $"{BaseAppDataFolder}/default.json";
+            if (!File.Exists($"{BaseAppDataFolder}/default.json"))
+                return null;
+            try
+            {
+                string jsonstring = File.ReadAllText(path);
+                StoredAccountInfo? info = JsonSerializer.Deserialize<StoredAccountInfo>(jsonstring);
+                if (info != null)
+                    return info.AccountId;
+            }
+            catch { }
             return null;
         }
     }
