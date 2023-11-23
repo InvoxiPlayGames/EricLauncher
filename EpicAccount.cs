@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -12,6 +13,7 @@ namespace EricLauncher
     {
         private const string EXCHANGE_API_URL = "/account/api/oauth/exchange";
         private const string VERIFY_API_URL = "/account/api/oauth/verify";
+        private const string LOGOUT_API_URL = "/account/api/oauth/sessions/kill";
 
         public string? AccountId;
         public string? DisplayName;
@@ -73,6 +75,12 @@ namespace EricLauncher
             EpicVerifyResponse? verify_response = await resp.Content.ReadFromJsonAsync<EpicVerifyResponse>();
             // if the token is expiring soon, why bother amirite
             return verify_response!.expires_in > 60;
+        }
+
+        public async Task<bool> Logout()
+        {
+            HttpResponseMessage resp = await HTTPClient.DeleteAsync($"{LOGOUT_API_URL}/{AccessToken}");
+            return resp.StatusCode == HttpStatusCode.NoContent || resp.StatusCode == HttpStatusCode.OK;
         }
 
         public StoredAccountInfo MakeStoredAccountInfo()

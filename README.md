@@ -25,7 +25,7 @@ This is designed to be run from the command line, but you can drag and drop a ga
 Alternatively you could make a batch file or shortcut, or create a shortcut in a launcher such as Steam - pointing to EricLauncher, with the game you want to launch as the launch arguments
 
 ```
-Usage: EricLauncher.exe [executable path] (options) (game arguments)
+Usage: EricLauncher.exe [game executable path or verb] (options) (game arguments)
 
 Options:
   --accountId [id]     - use a specific Epic Games account ID to sign in.
@@ -35,13 +35,16 @@ Options:
   --dryRun             - goes through the Epic Games login flow, but does not launch the game.
   --offline            - skips the Epic Games login flow, to launch the game in offline mode.
   --manifest [file]    - specify a specific manifest file to use.
+
+Verbs:
+  logout    - Logs out of Epic Games.
 ```
 
 The account ID parameter is only required if you are using multiple accounts. Omitting this value will use (or save) a default account.
 
 For best results, make sure the game has been launched at least once by the official Epic Games Launcher, and the provided executable path is the same one that gets launched by the official launcher.
 
-Epic Games session files are stored in `%localappdata%\EricLauncher`.
+Epic Games session files are stored in `%localappdata%\EricLauncher`. You can log out of EricLauncher by running `EricLauncher.exe logout`.
 
 ## TODO
 

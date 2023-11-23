@@ -14,7 +14,7 @@ namespace EricLauncher
 
         static void PrintUsage()
         {
-            Console.WriteLine("Usage: EricLauncher.exe [executable path] (options) (game arguments)");
+            Console.WriteLine("Usage: EricLauncher.exe [game executable path or verb] (options) (game arguments)");
             Console.WriteLine();
             Console.WriteLine("Options:");
             Console.WriteLine("  --accountId [id]     - use a specific Epic Games account ID to sign in.");
@@ -24,6 +24,9 @@ namespace EricLauncher
             Console.WriteLine("  --dryRun             - goes through the Epic Games login flow, but does not launch the game.");
             Console.WriteLine("  --offline            - skips the Epic Games login flow, to launch the game in offline mode.");
             Console.WriteLine("  --manifest [file]    - specify a specific manifest file to use.");
+            Console.WriteLine();
+            Console.WriteLine("Verbs:");
+            Console.WriteLine("  logout    - Logs out of Epic Games.");
             Console.WriteLine();
         }
 
@@ -86,13 +89,16 @@ namespace EricLauncher
             // handle special exe names
             bool exchange_code_only = false;
             bool caldera_only = false;
-            if (exe_name.StartsWith("EricExchange")) exchange_code_only = true;
-            if (exe_name.EndsWith("EricCaldera")) caldera_only = true;
-            // both these options imply a dry run with no manifest
-            if (exchange_code_only || caldera_only)
+            bool logout = false;
+            if (exe_name.StartsWith("exchange")) exchange_code_only = true;
+            if (exe_name.EndsWith("caldera")) caldera_only = true;
+            if (exe_name == "logout") logout = true;
+            // all these options imply an online dry run with no manifest
+            if (exchange_code_only || caldera_only || logout)
             {
                 no_manifest = true;
                 dry_run = true;
+                offline = false;
             }
 
             // always run as a dry run if we're on Linux or FreeBSD
@@ -224,6 +230,20 @@ namespace EricLauncher
                 Console.WriteLine($"Logged in as {account.DisplayName} ({account.AccountId})!");
             else
                 Console.WriteLine($"Logged in as {account.AccountId}!");
+
+            if (logout)
+            {
+                DeleteAccountInfo(account.AccountId!);
+                if (GetDefaultAccount() == account.AccountId!)
+                    DeleteDefaultAccount();
+
+                bool success = await account.Logout();
+                if (success)
+                    Console.WriteLine("Successfully logged out!");
+                else // hdd still doesn't have session but it exists in backend...
+                    Console.WriteLine("Logged out!");
+                return;
+            }
 
             // save our refresh token for later usage
             if (!Directory.Exists(BaseAppDataFolder))
@@ -420,6 +440,17 @@ namespace EricLauncher
                 File.WriteAllText($"{BaseAppDataFolder}/default.json", $"{{\"AccountId\": \"{info.AccountId!}\"}}");
         }
 
+        static void DeleteAccountInfo(string account_id)
+        {
+            string path = $"{BaseAppDataFolder}/{account_id}.json";
+            try
+            {
+                File.Delete(path);
+            }
+            catch { }
+            return;
+        }
+
         static StoredAccountInfo? GetAccountInfo(string account_id)
         {
             string path = $"{BaseAppDataFolder}/{account_id}.json";
@@ -457,7 +488,7 @@ namespace EricLauncher
         static string? GetDefaultAccount()
         {
             string path = $"{BaseAppDataFolder}/default.json";
-            if (!File.Exists($"{BaseAppDataFolder}/default.json"))
+            if (!File.Exists(path))
                 return null;
             try
             {
@@ -468,6 +499,17 @@ namespace EricLauncher
             }
             catch { }
             return null;
+        }
+
+        static void DeleteDefaultAccount()
+        {
+            string path = $"{BaseAppDataFolder}/default.json";
+            try
+            {
+                File.Delete(path);
+            }
+            catch { }
+            return;
         }
     }
 }
