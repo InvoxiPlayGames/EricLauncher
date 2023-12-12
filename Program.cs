@@ -89,12 +89,14 @@ namespace EricLauncher
             // handle special exe names
             bool exchange_code_only = false;
             bool caldera_only = false;
+            bool access_token_only = false;
             bool logout = false;
             if (exe_name.StartsWith("exchange")) exchange_code_only = true;
             if (exe_name.EndsWith("caldera")) caldera_only = true;
+            if (exe_name == "access") access_token_only = true;
             if (exe_name == "logout") logout = true;
             // all these options imply an online dry run with no manifest
-            if (exchange_code_only || caldera_only || logout)
+            if (exchange_code_only || caldera_only || access_token_only || logout)
             {
                 no_manifest = true;
                 dry_run = true;
@@ -254,7 +256,12 @@ namespace EricLauncher
             EGLManifest? manifest = null;
             if (!no_manifest && manifest_path == null)
             {
-                manifest = GetEGLManifest(Path.GetFileName(exe_name));
+                // always use FortniteLauncher.exe manifest for FortniteGame
+                // so many edge cases im boutta bust
+                if (Path.GetFileName(exe_name).StartsWith("FortniteGame"))
+                    manifest = GetEGLManifest("FortniteLauncher.exe");
+                else
+                    manifest = GetEGLManifest(Path.GetFileName(exe_name));
             } else if (!no_manifest && manifest_path != null)
             {
                 string jsonstring = File.ReadAllText(manifest_path);
@@ -275,6 +282,20 @@ namespace EricLauncher
             {
                 Console.WriteLine($"Exchange Code: {exchange!}");
                 if (!caldera_only) return;
+            }
+
+            if (access_token_only)
+            {
+                EpicLogin fnLogin = new(EpicLogin.FORTNITE_PC_CLIENT, EpicLogin.FORTNITE_PC_SECRET);
+                EpicAccount? fnAccount = await fnLogin.LoginWithExchangeCode(exchange);
+                if (fnAccount != null)
+                {
+                    Console.WriteLine($"Access Token: {fnAccount.AccessToken}");
+                } else
+                {
+                    Console.WriteLine("Failed to get access token.");
+                }
+                return;
             }
 
             // caldera simulation

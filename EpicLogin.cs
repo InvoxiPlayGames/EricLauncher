@@ -13,6 +13,10 @@ namespace EricLauncher
     {
         public const string LAUNCHER_CLIENT = "34a02cf8f4414e29b15921876da36f9a";
         public const string LAUNCHER_SECRET = "daafbccc737745039dffe53d94fc76cf";
+
+        public const string FORTNITE_PC_CLIENT = "ec684b8c687f479fadea3cb2ad83f5c6";
+        public const string FORTNITE_PC_SECRET = "e1f31c211f28413186262d37a13fc84d";
+
         public const string ACCOUNTS_API_BASE = "https://account-public-service-prod.ol.epicgames.com";
 
         private const string TOKEN_API_URL = "/account/api/oauth/token";
