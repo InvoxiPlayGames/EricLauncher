@@ -470,7 +470,7 @@ namespace EricLauncher
             string legendaryInstalledPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
                 "/heroic/legendaryConfig/legendary/installed.json";
 
-            Dictionary<string, LegendaryManifestEntry> manifests;
+            Dictionary<string, LegendaryManifestEntry>? manifests;
             try
             {
                 string manifeststring = File.ReadAllText(legendaryInstalledPath);
