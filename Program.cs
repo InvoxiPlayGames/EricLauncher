@@ -8,7 +8,7 @@ namespace EricLauncher
 {
     internal class Program
     {
-        static string BaseAppDataFolder = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData) + "/EricLauncher";
+        static string BaseAppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "/EricLauncher";
         static string BaseOVTFolder = BaseAppDataFolder + "/OVT";
         static string RedirectURL = "https://www.epicgames.com/id/api/redirect?clientId=" + EpicLogin.LAUNCHER_CLIENT + "&responseType=code";
 
@@ -19,11 +19,14 @@ namespace EricLauncher
             Console.WriteLine("Options:");
             Console.WriteLine("  --accountId [id]     - use a specific Epic Games account ID to sign in.");
             Console.WriteLine("  --account [username] - use a specific Epic Games account username to sign in.");
+            Console.WriteLine("  --setDefault         - when used with either account/accountId, sets the default account.");
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                Console.WriteLine("  --heroic             - loads the game's manifest from Heroic Games Launcher instead of Epic.");
+            Console.WriteLine("  --manifest [path]    - loads an Epic Games Launcher manifest file from the specified path.");
             Console.WriteLine("  --noManifest         - don't check the local Epic Games Launcher install folder for the manifest.");
             Console.WriteLine("  --stayOpen           - keeps EricLauncher open in the background until the game is closed.");
             Console.WriteLine("  --dryRun             - goes through the Epic Games login flow, but does not launch the game.");
             Console.WriteLine("  --offline            - skips the Epic Games login flow, to launch the game in offline mode.");
-            Console.WriteLine("  --manifest [file]    - specify a specific manifest file to use.");
             Console.WriteLine();
             Console.WriteLine("Verbs:");
             Console.WriteLine("  logout    - Logs out of Epic Games.");
@@ -46,6 +49,7 @@ namespace EricLauncher
             string? manifest_path = null;
             bool set_default = false;
             bool no_manifest = false;
+            bool heroic_manifest = false;
             bool stay_open = false;
             bool dry_run = false;
             bool offline = false;
@@ -66,6 +70,8 @@ namespace EricLauncher
                         set_default = true;
                     else if (args[i] == "--noManifest")
                         no_manifest = true;
+                    else if (args[i] == "--heroic")
+                        heroic_manifest = true;
                     else if (args[i] == "--stayOpen")
                         stay_open = true;
                     else if (args[i] == "--dryRun")
@@ -256,9 +262,11 @@ namespace EricLauncher
             EGLManifest? manifest = null;
             if (!no_manifest && manifest_path == null)
             {
-                // always use FortniteLauncher.exe manifest for FortniteGame
-                // so many edge cases im boutta bust
-                if (Path.GetFileName(exe_name).StartsWith("FortniteGame"))
+                // load the manifest from the legendary cache if specified as an argument
+                if (heroic_manifest)
+                    manifest = GetLegendaryManifest(Path.GetFileName(exe_name));
+                // always use FortniteLauncher's manifest for FortniteClient binaries
+                else if (Path.GetFileName(exe_name).ToLower().StartsWith("fortniteclient"))
                     manifest = GetEGLManifest("FortniteLauncher.exe");
                 else
                     manifest = GetEGLManifest(Path.GetFileName(exe_name));
@@ -428,7 +436,7 @@ namespace EricLauncher
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) // .NET 7 doesn't make SpecialFolder.LocalAppliactionData go to the correct folder :)
                 manifestfolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Library", "Application Support") + manifestfolder;
             else
-                manifestfolder = System.Environment.GetFolderPath(System.Environment.SpecialFolder.CommonApplicationData) + manifestfolder;
+                manifestfolder = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + manifestfolder;
 
             try
             {
@@ -450,6 +458,44 @@ namespace EricLauncher
                 }
                 catch { }
             }
+            return null;
+        }
+
+        static EGLManifest? GetLegendaryManifest(string executable_name)
+        {
+            // we don't yet support
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return null;
+
+            string legendaryInstalledPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                "/heroic/legendaryConfig/legendary/installed.json";
+
+            Dictionary<string, LegendaryManifestEntry> manifests;
+            try
+            {
+                string manifeststring = File.ReadAllText(legendaryInstalledPath);
+                manifests = JsonSerializer.Deserialize<Dictionary<string, LegendaryManifestEntry>>(manifeststring);
+                foreach (LegendaryManifestEntry manifest in manifests!.Values)
+                {
+                    if (manifest.executable != null &&
+                        Path.GetFileName(manifest.executable).ToLower() == executable_name.ToLower())
+                    {
+                        // build a fake EGLManifest i can't be bothered man
+                        EGLManifest proper = new();
+                        proper.AppName = manifest.app_name;
+                        proper.bCanRunOffline = manifest.can_run_offline;
+                        proper.LaunchExecutable = manifest.executable;
+                        proper.InstallLocation = manifest.install_path;
+                        proper.InstallSize = manifest.install_size;
+                        proper.InstallTags = manifest.install_tags;
+                        proper.bIsApplication = !manifest.is_dlc; // no idea??
+                        proper.LaunchCommand = manifest.launch_parameters;
+                        proper.OwnershipToken = manifest.requires_ot.ToString();
+                        proper.DisplayName = manifest.title; // also just a guess
+                        return proper;
+                    }
+                }
+            } catch { }
             return null;
         }
 
