@@ -130,8 +130,11 @@ namespace EricLauncher
                     if (!is_up_to_date)
                     {
                         Console.WriteLine("Fortnite is not the latest version!");
-                        Console.WriteLine("Please open the Epic Games Launcher to start updating the game.");
-                        Thread.Sleep(2500);
+                        if (!heroic_manifest)
+                            Console.WriteLine("Please open the Epic Games Launcher to start updating the game.");
+                        else
+                            Console.WriteLine("Please open the Heroic Games Launcher to start updating the game.");
+                        Thread.Sleep(5000);
                         return;
                     }
                 } catch
@@ -492,6 +495,17 @@ namespace EricLauncher
                         proper.LaunchCommand = manifest.launch_parameters;
                         proper.OwnershipToken = manifest.requires_ot.ToString();
                         proper.DisplayName = manifest.title; // also just a guess
+                        proper.MainGameAppName = manifest.app_name;
+                        // another ugly hack to get Fortnite in particular to work
+                        // i don't like Legendary all too much
+                        if (manifest.app_name == "Fortnite" || manifest.app_name == "Fortnite_Studio") {
+                            proper.MainGameAppName = "Fortnite";
+                            proper.MainGameCatalogNamespace = "fn"; // not stored in legendary installed.json
+                        } else {
+                            proper.MainGameAppName = manifest.app_name;
+                            // do any other games need MainGameCatalogNamespace
+                            // can fortnite quit fucking around
+                        }
                         return proper;
                     }
                 }
