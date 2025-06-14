@@ -376,8 +376,8 @@ namespace EricLauncher
 
             if (manifest != null)
             {
-                p.StartInfo.ArgumentList.Add($"-epicsandboxid={manifest.MainGameCatalogNamespace}");
-                p.StartInfo.ArgumentList.Add($"-epicapp={manifest.MainGameAppName}");
+                p.StartInfo.ArgumentList.Add($"-epicsandboxid={manifest.CatalogNamespace}");
+                p.StartInfo.ArgumentList.Add($"-epicapp={manifest.AppName}");
                 if (manifest.LaunchCommand != null && manifest.LaunchCommand.Length > 0)
                 {
                     string[] split_args = manifest.LaunchCommand.Split(' ');
